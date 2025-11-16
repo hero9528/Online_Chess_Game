@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game - Online Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>🎮 Chess Game Login</h2>
+            <div class="login-form">
+                <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="20">
+                <button id="loginBtn" class="btn btn-primary">Login / Create Account</button>
+                <div id="loginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Challenge Modal -->
+    <div id="challengeModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>🎯 Game Challenge</h2>
+            <div class="challenge-info">
+                <p id="challengeFromUser" style="font-size: 1.2em; margin: 20px 0;"></p>
+                <p style="color: #666;">wants to play chess with you!</p>
+            </div>
+            <div class="challenge-buttons">
+                <button id="acceptChallengeBtn" class="btn btn-accept">✅ Accept</button>
+                <button id="rejectChallengeBtn" class="btn btn-reject">❌ Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container" id="mainContainer" style="display: none;">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <h1>♔ Chess Game ♔</h1>
+                <div class="user-info">
+                    <span id="currentUsername"></span>
+                    <button id="logoutBtn" class="btn btn-small">Logout</button>
+                </div>
+            </div>
+            
+            <div class="game-mode-selector">
+                <button class="mode-btn active" id="modeLocal" data-mode="local">🏠 Local Game</button>
+                <button class="mode-btn" id="modeOnline" data-mode="online">🌐 Online Game</button>
+                <button class="mode-btn" id="modePvC" data-mode="pvc">🤖 vs Computer</button>
+            </div>
+            
+            <div class="game-info">
+                <div class="turn-indicator">
+                    <span class="current-turn" id="currentTurnDisplay">White's Turn</span>
+                    <span class="computer-thinking" id="computerThinking" style="display: none;">🤖 Computer सोच रहा है...</span>
+                </div>
+                <div class="game-status" id="gameStatus">Game in Progress</div>
+                <div id="onlineGameInfo" class="online-game-info" style="display: none;">
+                    <span id="opponentName"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <!-- Friends Sidebar -->
+            <div class="friends-sidebar" id="friendsSidebar">
+                <div class="sidebar-header">
+                    <h3>👥 Friends</h3>
+                    <button id="toggleFriends" class="btn-icon">×</button>
+                </div>
+                
+                <div class="search-section">
+                    <input type="text" id="searchUsersInput" placeholder="Search users...">
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+                
+                <div class="friend-requests-section">
+                    <h4>Friend Requests</h4>
+                    <div id="friendRequestsList"></div>
+                </div>
+                
+                <div class="friends-list-section">
+                    <h4>My Friends</h4>
+                    <div id="friendsList"></div>
+                </div>
+            </div>
+
+            <!-- Game Board -->
+            <div class="game-area">
+                <div class="game-board-container">
+                    <div class="board-wrapper">
+                        <div class="coordinates coordinates-top">
+                            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
+                        </div>
+                        <div class="board" id="chessBoard"></div>
+                        <div class="coordinates coordinates-bottom">
+                            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
+                        </div>
+                    </div>
+                    <div class="coordinates coordinates-left">
+                        <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                    </div>
+                    <div class="coordinates coordinates-right">
+                        <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-reset" id="resetBtn">🔄 नया खेल</button>
+                    <button class="btn btn-undo" id="undoBtn">↩️ Undo</button>
+                    <button class="btn btn-friends" id="toggleFriendsBtn">👥 Friends</button>
+                </div>
+
+                <div class="captured-pieces">
+                    <div class="captured-white">
+                        <h3>Captured White Pieces</h3>
+                        <div class="captured-container" id="capturedWhite"></div>
+                    </div>
+                    <div class="captured-black">
+                        <h3>Captured Black Pieces</h3>
+                        <div class="captured-container" id="capturedBlack"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-panel" id="chatPanel">
+                <div class="chat-header">
+                    <h3>💬 Chat</h3>
+                    <button id="toggleChat" class="btn-icon">×</button>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages"></div>
+                
+                <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                    <span id="typingUsername"></span> is typing...
+                </div>
+                
+                <div class="chat-input-container">
+                    <button class="emoji-btn" id="emojiBtn">😀</button>
+                    <input type="text" id="chatInput" placeholder="Type a message...">
+                    <button class="send-btn" id="sendChatBtn">Send</button>
+                </div>
+                
+                <div class="emoji-picker" id="emojiPicker" style="display: none;">
+                    <div class="emoji-grid">
+                        <span class="emoji">😀</span><span class="emoji">😂</span><span class="emoji">😍</span><span class="emoji">😎</span>
+                        <span class="emoji">🤔</span><span class="emoji">😊</span><span class="emoji">😢</span><span class="emoji">😡</span>
+                        <span class="emoji">👍</span><span class="emoji">👎</span><span class="emoji">👏</span><span class="emoji">🙌</span>
+                        <span class="emoji">🎉</span><span class="emoji">🔥</span><span class="emoji">💪</span><span class="emoji">⭐</span>
+                        <span class="emoji">♟️</span><span class="emoji">♔</span><span class="emoji">♕</span><span class="emoji">🎯</span>
+                        <span class="emoji">✅</span><span class="emoji">❌</span><span class="emoji">💯</span><span class="emoji">🎮</span>
+                    </div>
+                </div>
+                
+                <div class="voice-chat-controls">
+                    <button id="voiceChatBtn" class="btn btn-voice">🎤 Voice Chat</button>
+                    <button id="muteBtn" class="btn btn-mute" style="display: none;">🔇 Mute</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
